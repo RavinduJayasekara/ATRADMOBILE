@@ -13,13 +13,13 @@ export const fetchGainers = () => {
     if (!response.ok) {
       throw new Error("Something went wrong!");
     }
-    
+
     const resData = await response.text();
 
     let replaceString = resData.replace(/'/g, '"');
     let object = JSON.parse(replaceString);
 
-    console.log(object.data.watch);
+    console.log("Object is " + object);
 
     dispatch({
       type: SET_GAINERS,
@@ -36,6 +36,7 @@ export const fetchLosers = () => {
 
     let replaceString = resData.replace(/'/g, '"');
     let object = JSON.parse(replaceString);
+    console.log(object);
 
     dispatch({
       type: SET_LOSERS,
@@ -53,8 +54,6 @@ export const fetchShareVolume = () => {
     let replaceString = resData.replace(/'/g, '"');
     let object = JSON.parse(replaceString);
 
-    console.log(object.data.watch);
-
     dispatch({
       type: SET_SHARE_VOLUME,
       shareVolume: object.data.watch,
@@ -70,8 +69,6 @@ export const fetchTurnOver = () => {
 
     let replaceString = resData.replace(/'/g, '"');
     let object = JSON.parse(replaceString);
-
-    console.log(object.data.watch);
 
     dispatch({
       type: SET_TURN_OVER,

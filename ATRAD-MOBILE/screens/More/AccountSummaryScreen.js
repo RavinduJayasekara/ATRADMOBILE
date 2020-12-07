@@ -9,14 +9,17 @@ import {
 } from "react-native";
 import moment from "moment";
 import { useSelector, useDispatch } from "react-redux";
+import { HeaderButtons, Item } from "react-navigation-header-buttons";
+import HeaderButton from "../../components/ATComponents/HeaderButton";
 
-import * as dropdownActions from "../../store/action/dropdownclient";
+import * as loadingClients from "../../store/action/loadingclients";
 import DefaultText from "../../components/UI/DefaultText";
 import Portfolio from "../../Links/Portfolio";
 import Links from "../../Links/Links";
 import { Picker } from "@react-native-community/picker";
 import Card from "../../components/UI/Card";
 import Colors from "../../constants/Colors";
+import { LinearGradient } from "expo-linear-gradient";
 
 //THESE EXACT SAME STEPS WILL BE FOLLOWED IN PORTFOLIO ALSO
 
@@ -47,7 +50,6 @@ const generateLink = (cCode, bId, cAcnId) => {
 };
 
 const generateExactValue = (value) => {
-  console.log("Value is " + value);
   let num = 1;
   const numberSplitArray = value.split("E");
 
@@ -64,7 +66,22 @@ const generateExactValue = (value) => {
 const AccountSummaryScreen = (props) => {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingDetails, setLoadingDetails] = useState(false);
-  const clientDetails = useSelector((state) => state.dropdownclient.clientDetails);
+
+  const allClients = useSelector((state) => state.loadingclients.allClients);
+
+  const clientArray = [];
+
+  for (const key in allClients) {
+    clientArray.push({
+      label:
+        allClients[key].clientCode +
+        " (" +
+        allClients[key].initials +
+        allClients[key].lastName +
+        ")",
+      value: allClients[key].clientCode,
+    });
+  }
   const dispatch = useDispatch();
 
   const [cCodeVal, setCCodeVal] = useState("");
@@ -127,7 +144,7 @@ const AccountSummaryScreen = (props) => {
 
       let replaceString = resData.replace(/'/g, '"');
       let object = JSON.parse(replaceString);
-      // console.log(object.data.clientSummary.totalPortfolioCost);
+
       totCostPort = generateExactValue(
         object.data.clientSummary.totalPortfolioCost
       );
@@ -169,22 +186,36 @@ const AccountSummaryScreen = (props) => {
     }
   };
 
+  const loadDropDown = useCallback(async () => {
+    setIsLoading(true);
+    await dispatch(loadingClients.fetchClients());
+    setIsLoading(false);
+  }, [setIsLoading, dispatch]);
+
   useLayoutEffect(() => {
-    const loadDropDown = async () => {
-      setIsLoading(true);
-      await dispatch(dropdownActions.fetchDropDownDetails());
-      setIsLoading(false);
-    };
+    props.navigation.setOptions({
+      headerRight: () => {
+        return (
+          <HeaderButtons HeaderButtonComponent={HeaderButton}>
+            <Item
+              iconName="ios-search"
+              onPress={() => {
+                props.navigation.navigate("SearchStackNavigator");
+              }}
+            />
+          </HeaderButtons>
+        );
+      },
+    });
+
     loadDropDown();
-  }, [dispatch, setIsLoading]);
+  }, [dispatch]);
 
   const changeItemHandler = async (itemData) => {
     setCCodeVal(itemData);
-    const selectedClient = dropDownElements.find(
+    const selectedClient = allClients.find(
       (cli) => cli.clientCode === itemData
     );
-
-    console.log(selectedClient);
 
     const cCode = selectedClient.clientCode;
     const bId = selectedClient.brokerId;
@@ -204,174 +235,191 @@ const AccountSummaryScreen = (props) => {
     );
   }
 
+  if (clientArray.length === 0) {
+    return (
+      <View style={styles.centered}>
+        <Text>No Clients. No Information.</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      {clientDetails.length !== 0 ? (
-        <Picker
-          onValueChange={changeItemHandler}
-          selectedValue={
-            cCodeVal === ""
-              ? changeItemHandler(dropDownArray[0].value)
-              : cCodeVal
-          }
-          itemStyle={{ height: 100 }}
-        >
-          {clientDetails.map((itemVal, index) => (
-            <Picker.Item
-              label={itemVal.label}
-              value={itemVal.value}
-              key={index}
-            />
-          ))}
-        </Picker>
-      ) : (
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+      <LinearGradient
+        style={styles.linearGrad}
+        colors={["#000000", "#696c69", "#b0bab1"]}
+      >
+        <View style={styles.dropDownContainer}>
+          {clientArray.length !== 0 ? (
+            <Picker
+              onValueChange={changeItemHandler}
+              selectedValue={
+                cCodeVal === ""
+                  ? changeItemHandler(clientArray[0].value)
+                  : cCodeVal
+              }
+              itemStyle={{ height: 100 }}
+            >
+              {clientArray.map((itemVal, index) => (
+                <Picker.Item
+                  label={itemVal.label}
+                  value={itemVal.value}
+                  key={index}
+                />
+              ))}
+            </Picker>
+          ) : (
+            <View style={styles.centered}>
+              <ActivityIndicator size="large" color={Colors.primary} />
+            </View>
+          )}
         </View>
-      )}
-      <View style={{ flex: 1 }}>
-        <ScrollView>
-          <Card style={styles.contentContainer}>
-            <DefaultText>Total Cost of the Portfolio</DefaultText>
-            {loadingDetails ? (
-              <View>
-                <ActivityIndicator size="small" color={Colors.primary} />
-              </View>
-            ) : (
-              <Text>
-                {totCostPort.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-              </Text>
-            )}
-          </Card>
-          <Card style={styles.contentContainer}>
-            <DefaultText>Total Market Value of the Portfolio</DefaultText>
-            {loadingDetails ? (
-              <View>
-                <ActivityIndicator size="small" color={Colors.primary} />
-              </View>
-            ) : (
-              <Text>
-                {totMarketPort.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-              </Text>
-            )}
-          </Card>
-          <Card style={styles.contentContainer}>
-            <DefaultText>Total Gain/Loss</DefaultText>
-            {loadingDetails ? (
-              <View>
-                <ActivityIndicator size="small" color={Colors.primary} />
-              </View>
-            ) : (
-              <Text style={{ color: textColorTotGL }}>
-                {totGL.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-              </Text>
-            )}
-          </Card>
-          <Card style={styles.contentContainer}>
-            <DefaultText>Cash Balance</DefaultText>
-            {loadingDetails ? (
-              <View>
-                <ActivityIndicator size="small" color={Colors.primary} />
-              </View>
-            ) : (
-              <Text style={{ color: textColorCashBalance }}>
-                {cashBalance.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-              </Text>
-            )}
-          </Card>
-          <Card style={styles.contentContainer}>
-            <DefaultText>Buying Power</DefaultText>
+        <View style={{ flex: 1 }}>
+          <ScrollView contentContainerStyle={{ paddingHorizontal: 5 }}>
+            <Card style={styles.contentContainer}>
+              <DefaultText>Total Cost of the Portfolio</DefaultText>
+              {loadingDetails ? (
+                <View>
+                  <ActivityIndicator size="small" color={Colors.primary} />
+                </View>
+              ) : (
+                <Text>
+                  {totCostPort.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                </Text>
+              )}
+            </Card>
+            <Card style={styles.contentContainer}>
+              <DefaultText>Total Market Value of the Portfolio</DefaultText>
+              {loadingDetails ? (
+                <View>
+                  <ActivityIndicator size="small" color={Colors.primary} />
+                </View>
+              ) : (
+                <Text>
+                  {totMarketPort
+                    .toString()
+                    .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                </Text>
+              )}
+            </Card>
+            <Card style={styles.contentContainer}>
+              <DefaultText>Total Gain/Loss</DefaultText>
+              {loadingDetails ? (
+                <View>
+                  <ActivityIndicator size="small" color={Colors.primary} />
+                </View>
+              ) : (
+                <Text style={{ color: textColorTotGL }}>
+                  {totGL.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                </Text>
+              )}
+            </Card>
+            <Card style={styles.contentContainer}>
+              <DefaultText>Cash Balance</DefaultText>
+              {loadingDetails ? (
+                <View>
+                  <ActivityIndicator size="small" color={Colors.primary} />
+                </View>
+              ) : (
+                <Text style={{ color: textColorCashBalance }}>
+                  {cashBalance.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                </Text>
+              )}
+            </Card>
+            <Card style={styles.contentContainer}>
+              <DefaultText>Buying Power</DefaultText>
 
-            {loadingDetails ? (
-              <View>
-                <ActivityIndicator size="small" color={Colors.primary} />
-              </View>
-            ) : (
-              <Text style={{ color: textColorBuyingPower }}>
-                {buyingPower.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-              </Text>
-            )}
-          </Card>
-          <Card style={styles.contentContainer}>
-            <DefaultText>Total Pending Buy Orders Value</DefaultText>
-            {loadingDetails ? (
-              <View>
-                <ActivityIndicator size="small" color={Colors.primary} />
-              </View>
-            ) : (
-              <Text>
-                {pendingBuyOrders
-                  .toString()
-                  .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-              </Text>
-            )}
-          </Card>
-          <Card style={styles.contentContainer}>
-            <DefaultText>Exposure Precentage</DefaultText>
-            {loadingDetails ? (
-              <View>
-                <ActivityIndicator size="small" color={Colors.primary} />
-              </View>
-            ) : (
-              <Text>
-                {percentage.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-              </Text>
-            )}
-          </Card>
-          <Card style={styles.contentContainer}>
-            <DefaultText>Exposure Margin Amount-Equity</DefaultText>
-            {loadingDetails ? (
-              <View>
-                <ActivityIndicator size="small" color={Colors.primary} />
-              </View>
-            ) : (
-              <Text>
-                {marginAmountEquity
-                  .toString()
-                  .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-              </Text>
-            )}
-          </Card>
-          <Card style={styles.contentContainer}>
-            <DefaultText>Exposure Margin Amount-Debt</DefaultText>
-            {loadingDetails ? (
-              <View>
-                <ActivityIndicator size="small" color={Colors.primary} />
-              </View>
-            ) : (
-              <Text>
-                {marginAmountDebt
-                  .toString()
-                  .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-              </Text>
-            )}
-          </Card>
-          <Card style={styles.contentContainer}>
-            <DefaultText>Cash Block Amount</DefaultText>
-            {loadingDetails ? (
-              <View>
-                <ActivityIndicator size="small" color={Colors.primary} />
-              </View>
-            ) : (
-              <Text>
-                {cashBlock.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-              </Text>
-            )}
-          </Card>
-          <Card style={styles.contentContainer}>
-            <DefaultText>Margin Block Amount</DefaultText>
-            {loadingDetails ? (
-              <View>
-                <ActivityIndicator size="small" color={Colors.primary} />
-              </View>
-            ) : (
-              <Text>
-                {marginBlock.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-              </Text>
-            )}
-          </Card>
-        </ScrollView>
-      </View>
+              {loadingDetails ? (
+                <View>
+                  <ActivityIndicator size="small" color={Colors.primary} />
+                </View>
+              ) : (
+                <Text style={{ color: textColorBuyingPower }}>
+                  {buyingPower.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                </Text>
+              )}
+            </Card>
+            <Card style={styles.contentContainer}>
+              <DefaultText>Total Pending Buy Orders Value</DefaultText>
+              {loadingDetails ? (
+                <View>
+                  <ActivityIndicator size="small" color={Colors.primary} />
+                </View>
+              ) : (
+                <Text>
+                  {pendingBuyOrders
+                    .toString()
+                    .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                </Text>
+              )}
+            </Card>
+            <Card style={styles.contentContainer}>
+              <DefaultText>Exposure Precentage</DefaultText>
+              {loadingDetails ? (
+                <View>
+                  <ActivityIndicator size="small" color={Colors.primary} />
+                </View>
+              ) : (
+                <Text>
+                  {percentage.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                </Text>
+              )}
+            </Card>
+            <Card style={styles.contentContainer}>
+              <DefaultText>Exposure Margin Amount-Equity</DefaultText>
+              {loadingDetails ? (
+                <View>
+                  <ActivityIndicator size="small" color={Colors.primary} />
+                </View>
+              ) : (
+                <Text>
+                  {marginAmountEquity
+                    .toString()
+                    .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                </Text>
+              )}
+            </Card>
+            <Card style={styles.contentContainer}>
+              <DefaultText>Exposure Margin Amount-Debt</DefaultText>
+              {loadingDetails ? (
+                <View>
+                  <ActivityIndicator size="small" color={Colors.primary} />
+                </View>
+              ) : (
+                <Text>
+                  {marginAmountDebt
+                    .toString()
+                    .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                </Text>
+              )}
+            </Card>
+            <Card style={styles.contentContainer}>
+              <DefaultText>Cash Block Amount</DefaultText>
+              {loadingDetails ? (
+                <View>
+                  <ActivityIndicator size="small" color={Colors.primary} />
+                </View>
+              ) : (
+                <Text>
+                  {cashBlock.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                </Text>
+              )}
+            </Card>
+            <Card style={styles.contentContainer}>
+              <DefaultText>Margin Block Amount</DefaultText>
+              {loadingDetails ? (
+                <View>
+                  <ActivityIndicator size="small" color={Colors.primary} />
+                </View>
+              ) : (
+                <Text>
+                  {marginBlock.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                </Text>
+              )}
+            </Card>
+          </ScrollView>
+        </View>
+      </LinearGradient>
     </View>
   );
 };
@@ -391,6 +439,22 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  dropDownContainer: {
+    width: "97%",
+    backgroundColor: "white",
+    marginVertical: 10,
+    borderRadius: 10,
+    overflow: "hidden",
+    marginHorizontal: "1.5%",
+    shadowColor: Colors.none,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.26,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  linearGrad: {
+    flex: 1,
   },
 });
 

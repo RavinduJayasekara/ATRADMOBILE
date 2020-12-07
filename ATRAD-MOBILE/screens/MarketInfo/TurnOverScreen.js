@@ -16,7 +16,7 @@ import Colors from "../../constants/Colors";
 const TurnOverScreen = (props) => {
   const [isLoading, setIsLoading] = useState(false);
 
-  const turnOver = useSelector((state) => state.topStocks.securities);
+  const turnOver = useSelector((state) => state.topStocks.securitiesTurnOver);
 
   const dispatch = useDispatch();
 

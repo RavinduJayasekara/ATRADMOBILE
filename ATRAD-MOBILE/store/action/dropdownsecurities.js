@@ -15,11 +15,11 @@ export const fetchDropDownAllSecurities = () => {
     let replaceString = resData.replace(/'/g, '"');
     let object = JSON.parse(replaceString);
 
-    console.log(object.data.items);
+    const allSecurities = object.data.items;
 
     dispatch({
       type: GET_ALL_SECURITIES,
-      allSecurities: object.data.items,
+      allSecurities: allSecurities,
     });
   };
 };

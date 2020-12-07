@@ -1,6 +1,5 @@
 import React from "react";
 import AtradNavigator from "./navigation/AtradNavigator";
-import { NavigationContainer } from "@react-navigation/native";
 import { Provider } from "react-redux";
 import { createStore, applyMiddleware, combineReducers } from "redux";
 import ReduxThunk from "redux-thunk";
@@ -8,25 +7,27 @@ import ReduxThunk from "redux-thunk";
 import topStocksReducer from "./store/reducer/topStocks";
 import loginReducer from "./store/reducer/login";
 import marketsummaryReducer from "./store/reducer/marketsummary";
-import dropdownclientReducer from "./store/reducer/dropdownclient";
 import dropdownSecuritiesReducer from "./store/reducer/dropdownsecurities";
+import loadingclientsReducer from "./store/reducer/loadingclients";
+import authReducer from "./store/reducer/auth";
+import passwordReducer from "./store/reducer/passwordChange";
 
 export default function App() {
   const rootReducer = combineReducers({
     topStocks: topStocksReducer,
     login: loginReducer,
     marketsummary: marketsummaryReducer,
-    dropdownclient: dropdownclientReducer,
+    loadingclients: loadingclientsReducer,
     dropdownsecurities: dropdownSecuritiesReducer,
+    auth: authReducer,
+    passwordChange: passwordReducer,
   });
 
   const store = createStore(rootReducer, applyMiddleware(ReduxThunk));
 
   return (
     <Provider store={store}>
-      <NavigationContainer>
-        <AtradNavigator />
-      </NavigationContainer>
+      <AtradNavigator />
     </Provider>
   );
 }

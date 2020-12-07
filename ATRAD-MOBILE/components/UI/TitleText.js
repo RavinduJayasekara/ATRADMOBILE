@@ -4,7 +4,7 @@ import { View, Text, StyleSheet } from "react-native";
 const TitleText = (props) => {
   return (
     <View>
-      <Text style = {styles.text}>{props.children}</Text>
+      <Text style={{ ...styles.text, ...props.style }}>{props.children}</Text>
     </View>
   );
 };
@@ -12,8 +12,8 @@ const TitleText = (props) => {
 const styles = StyleSheet.create({
   text: {
     fontSize: 15,
-    fontWeight: 'bold'
-  }
-})
+    fontWeight: "bold",
+  },
+});
 
 export default TitleText;

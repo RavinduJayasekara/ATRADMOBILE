@@ -3,8 +3,11 @@ import { createStackNavigator } from "@react-navigation/stack";
 import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createDrawerNavigator } from "@react-navigation/drawer";
+import { useDispatch, useSelector } from "react-redux";
 import { HeaderButtons, Item } from "react-navigation-header-buttons";
 import { Ionicons, FontAwesome5, AntDesign } from "@expo/vector-icons";
+import { NavigationContainer } from "@react-navigation/native";
+import * as ScreenOrientation from "expo-screen-orientation";
 
 import HeaderButton from "../components/ATComponents/HeaderButton";
 import AnnouncementsScreen from "../screens/MarketInfo/AnnouncementsScreen";
@@ -25,10 +28,16 @@ import ChartScreen from "../screens/More/ChartScreen";
 import SettingsScreen from "../screens/More/SettingsScreen";
 import WatchListScreen from "../screens/SelectedWatch/WatchListScreen";
 import Colors from "../constants/Colors";
-import CompnayDetailsScreen from "../screens/SelectedWatch/CompanyDetailsScreen";
 import CompanyDetailsScreen from "../screens/SelectedWatch/CompanyDetailsScreen";
-import BuyScreen from "../screens/SelectedWatch/BuyScreen";
-import SellScreen from "../screens/SelectedWatch/SellScreen";
+import BuySellScreen from "../screens/SelectedWatch/BuySellScreen";
+import SignoutScreen from "../screens/Authentication/SignoutScreen";
+import LoginScreen from "../screens/Authentication/LoginScreen";
+import * as authActions from "../store/action/auth";
+import SearchWindow from "../screens/More/SearchWindow";
+
+const changeScreenOrientationToPortrait = async () => {
+  await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.DEFAULT);
+};
 
 const MarketInfoStack = createStackNavigator();
 
@@ -70,6 +79,10 @@ const MarketInfoStackNavigator = (props) => {
         component={MarketSummaryStackNavigator}
       />
       <MarketInfoStack.Screen
+        name={"SearchStackNavigator"}
+        component={SearchStackNavigator}
+      />
+      <MarketInfoStack.Screen
         name="TopStocksStackNavigator"
         component={TopStocksStackNavigator}
       />
@@ -90,10 +103,12 @@ const MarketSummaryTabNavigator = () => {
       <MarketSummaryTab.Screen
         name="TradeSummaryScreen"
         component={TradeSummaryScreen}
+        options={{ tabBarLabel: "Trade Summary" }}
       />
       <MarketSummaryTab.Screen
         name="IndicesSummaryScreen"
         component={IndicesSummaryScreen}
+        options={{ tabBarLabel: "Indices Summary" }}
       />
     </MarketSummaryTab.Navigator>
   );
@@ -122,17 +137,32 @@ const TopStocksTab = createMaterialTopTabNavigator();
 const TopStocksTabNavigator = () => {
   return (
     <TopStocksTab.Navigator
-      screenOptions={{
-        headerStyle: { backgroundColor: Colors.primary },
-        headerTintColor: "white",
-      }}
+      screenOptions={
+        {
+          // headerStyle: { backgroundColor: Colors.primary },
+          // headerTintColor: "white",
+        }
+      }
     >
-      <TopStocksTab.Screen name="GainersScreen" component={GainersScreen} />
-      <TopStocksTab.Screen name="LosersScreen" component={LosersScreen} />
-      <TopStocksTab.Screen name="TurnOverScreen" component={TurnOverScreen} />
+      <TopStocksTab.Screen
+        name="GainersScreen"
+        component={GainersScreen}
+        options={{ tabBarLabel: "Gainers" }}
+      />
+      <TopStocksTab.Screen
+        name="LosersScreen"
+        component={LosersScreen}
+        options={{ tabBarLabel: "Losers" }}
+      />
+      <TopStocksTab.Screen
+        name="TurnOverScreen"
+        component={TurnOverScreen}
+        options={{ tabBarLabel: "Turn Over" }}
+      />
       <TopStocksTab.Screen
         name="ShareVolumeScreen"
         component={ShareVolumeScreen}
+        options={{ tabBarLabel: "Share Volume" }}
       />
     </TopStocksTab.Navigator>
   );
@@ -140,17 +170,20 @@ const TopStocksTabNavigator = () => {
 
 const TopStocksStack = createStackNavigator();
 
-const TopStocksStackNavigator = () => {
+const TopStocksStackNavigator = (props) => {
   return (
     <TopStocksStack.Navigator
       screenOptions={{
         headerStyle: { backgroundColor: Colors.primary },
-        headerTintColor: "white",
+        headerTintColor: Colors.white,
       }}
     >
       <TopStocksStack.Screen
         name="TopStocksTabNavigator"
         component={TopStocksTabNavigator}
+        listeners={(props) => ({
+          focus: () => changeScreenOrientationToPortrait(),
+        })}
         options={(props) => ({
           headerLeft: () => {
             return (
@@ -164,7 +197,23 @@ const TopStocksStackNavigator = () => {
               </HeaderButtons>
             );
           },
+          headerRight: () => {
+            return (
+              <HeaderButtons HeaderButtonComponent={HeaderButton}>
+                <Item
+                  iconName="ios-search"
+                  onPress={() => {
+                    props.navigation.navigate("SearchStackNavigator");
+                  }}
+                />
+              </HeaderButtons>
+            );
+          },
         })}
+      />
+      <TopStocksStack.Screen
+        name={"SearchStackNavigator"}
+        component={SearchStackNavigator}
       />
     </TopStocksStack.Navigator>
   );
@@ -198,6 +247,10 @@ const OrderListStackNavigator = () => {
           },
         })}
       />
+      <OrderListStack.Screen
+        name={"SearchStackNavigator"}
+        component={SearchStackNavigator}
+      />
     </OrderListStack.Navigator>
   );
 };
@@ -229,6 +282,10 @@ const PortfolioSummaryStackNavigator = () => {
             );
           },
         })}
+      />
+      <PortfolioSummaryStack.Screen
+        name={"SearchStackNavigator"}
+        component={SearchStackNavigator}
       />
     </PortfolioSummaryStack.Navigator>
   );
@@ -265,14 +322,21 @@ const SelectWatchStackNavigator = () => {
       <SelectWatchStack.Screen
         name="WatchListScreen"
         component={WatchListScreen}
-        options={{}}
       />
       <SelectWatchStack.Screen
         name="CompanyDetailsScreen"
         component={CompanyDetailsScreen}
       />
-      <SelectWatchStack.Screen name="BuyScreen" component={BuyScreen} />
-      <SelectWatchStack.Screen name="SellScreen" component={SellScreen} />
+      <SelectWatchStack.Screen name="SearchWindow" component={SearchWindow} />
+      <SelectWatchStack.Screen
+        name="BuySellScreen"
+        component={BuySellScreen}
+        options={{ headerTitle: "Trading Screen" }}
+      />
+      <SelectWatchStack.Screen
+        name={"SearchStackNavigator"}
+        component={SearchStackNavigator}
+      />
     </SelectWatchStack.Navigator>
   );
 };
@@ -304,6 +368,10 @@ const AccountSummaryStackNavigator = () => {
             );
           },
         })}
+      />
+      <AccountSummaryStack.Screen
+        name={"SearchStackNavigator"}
+        component={SearchStackNavigator}
       />
     </AccountSummaryStack.Navigator>
   );
@@ -370,6 +438,21 @@ const SettingsStackNavigator = () => {
         })}
       />
     </SettingsStack.Navigator>
+  );
+};
+
+const SearchStack = createStackNavigator();
+
+const SearchStackNavigator = () => {
+  return (
+    <SearchStack.Navigator>
+      <SearchStack.Screen name={"SearchWindow"} component={SearchWindow} />
+      <SearchStack.Screen
+        name={"CompanyDetailsScreen"}
+        component={CompanyDetailsScreen}
+      />
+      <SearchStack.Screen name={"BuySellScreen"} component={BuySellScreen} />
+    </SearchStack.Navigator>
   );
 };
 
@@ -458,6 +541,8 @@ const DefaultTabNavigator = (props) => {
 const DefaultDrawer = createDrawerNavigator();
 
 const DefaultDrawerNavigator = () => {
+  const dispatch = useDispatch();
+
   return (
     <DefaultDrawer.Navigator
       initialRouteName="SelectedWatch"
@@ -479,6 +564,9 @@ const DefaultDrawerNavigator = () => {
           drawerLabel: "Market Info",
           unmountOnBlur: true,
         }}
+        listeners={() => ({
+          focus: () => changeScreenOrientationToPortrait(),
+        })}
       />
       <DefaultDrawer.Screen
         initialParams={{ routeScreen: "OrderListStackNavigator" }}
@@ -497,6 +585,9 @@ const DefaultDrawerNavigator = () => {
           drawerLabel: "Order List",
           unmountOnBlur: true,
         }}
+        listeners={() => ({
+          focus: () => changeScreenOrientationToPortrait(),
+        })}
       />
       <DefaultDrawer.Screen
         initialParams={{ routeScreen: "PortfolioSummaryStackNavigator" }}
@@ -515,6 +606,9 @@ const DefaultDrawerNavigator = () => {
           drawerLabel: "Portfolio Summary",
           unmountOnBlur: true,
         }}
+        listeners={() => ({
+          focus: () => changeScreenOrientationToPortrait(),
+        })}
       />
       <DefaultDrawer.Screen
         initialParams={{ routeScreen: "SelectWatchStackNavigator" }}
@@ -529,6 +623,9 @@ const DefaultDrawerNavigator = () => {
           drawerLabel: "Selected Watch",
           unmountOnBlur: true,
         }}
+        listeners={() => ({
+          focus: () => changeScreenOrientationToPortrait(),
+        })}
       />
       <DefaultDrawer.Screen
         name="TopStocksStackNavigator"
@@ -542,6 +639,9 @@ const DefaultDrawerNavigator = () => {
           drawerLabel: "Top Stocks",
           unmountOnBlur: true,
         }}
+        listeners={() => ({
+          focus: () => changeScreenOrientationToPortrait(),
+        })}
       />
       <DefaultDrawer.Screen
         name="AccountSummaryStackNavigator"
@@ -555,6 +655,9 @@ const DefaultDrawerNavigator = () => {
           drawerLabel: "Account Summary",
           unmountOnBlur: true,
         }}
+        listeners={() => ({
+          focus: () => changeScreenOrientationToPortrait(),
+        })}
       />
       <DefaultDrawer.Screen
         name="ChartStackNavigator"
@@ -571,6 +674,9 @@ const DefaultDrawerNavigator = () => {
           },
           drawerLabel: "Charts",
         }}
+        listeners={() => ({
+          focus: () => changeScreenOrientationToPortrait(),
+        })}
       />
       <DefaultDrawer.Screen
         name="SettingsStackNavigator"
@@ -587,17 +693,50 @@ const DefaultDrawerNavigator = () => {
           },
           drawerLabel: "Settings",
         }}
+        listeners={() => ({
+          focus: () => changeScreenOrientationToPortrait(),
+        })}
+      />
+      <DefaultDrawer.Screen
+        name="SignoutScreen"
+        component={SignoutScreen}
+        listeners={{ focus: () => dispatch(authActions.signOut()) }}
+        options={{ drawerLabel: "Sign Out" }}
       />
     </DefaultDrawer.Navigator>
   );
 };
+const LoginStack = createStackNavigator();
 
-// const LoginStack = createStackNavigator();
+const LoginStackNavigator = () => {
+  return (
+    <LoginStack.Navigator>
+      <LoginStack.Screen
+        name={"LoginScreen"}
+        component={LoginScreen}
+        options={{
+          headerTitle: "Login",
+          headerTintColor: "white",
+          headerStyle: { backgroundColor: Colors.primary },
+        }}
+      />
+    </LoginStack.Navigator>
+  );
+};
 
-// const LoginStackNavigator = () => {
+const AtradNavigator = () => {
+  const userToken = useSelector((state) => state.auth.userToken);
 
-// }
+  return (
+    <NavigationContainer>
+      {userToken == null ? <LoginStackNavigator /> : <DefaultDrawerNavigator />}
+      {/* <DefaultDrawerNavigator /> */}
+    </NavigationContainer>
+  );
+};
 
-export default DefaultDrawerNavigator;
+// export default DefaultDrawerNavigator;
+export default AtradNavigator;
+// export default SignoutScreen;
 
-// export default BuyScreen;
+// export default BuySellScreen;

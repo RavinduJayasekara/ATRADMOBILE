@@ -1,14 +1,22 @@
 import React, { useState, useLayoutEffect, useCallback } from "react";
-import { StyleSheet, View, ScrollView, ActivityIndicator } from "react-native";
+import {
+  StyleSheet,
+  View,
+  ScrollView,
+  ActivityIndicator,
+  Text,
+} from "react-native";
+import { HeaderButtons, Item } from "react-navigation-header-buttons";
+
 import Links from "../../Links/Links";
 import Portfolio from "../../Links/Portfolio";
 import TitleText from "../../components/UI/TitleText";
 import DefaultText from "../../components/UI/DefaultText";
 import { Picker } from "@react-native-community/picker";
 import Card from "../../components/UI/Card";
-import * as dropdownclientActions from "../../store/action/dropdownclient";
 import { useDispatch, useSelector } from "react-redux";
 import Colors from "../../constants/Colors";
+import HeaderButton from "../../components/ATComponents/HeaderButton";
 
 const generateLink = (cCode, bId, cLastName, cInitials) => {
   const clientCodeSplitArray = cCode.split("/");
@@ -156,8 +164,22 @@ const PortfolioSummaryScreen = (props) => {
   }, [setIsLoading, dispatch]);
 
   useLayoutEffect(() => {
+    props.navigation.setOptions({
+      headerRight: () => {
+        return (
+          <HeaderButtons HeaderButtonComponent={HeaderButton}>
+            <Item
+              iconName="ios-search"
+              onPress={() => {
+                props.navigation.navigate("SearchStackNavigator");
+              }}
+            />
+          </HeaderButtons>
+        );
+      },
+    });
     loadDropDown();
-  }, [loadDropDown, dispatch]);
+  }, [loadDropDown]);
 
   const changeItemHandler = async (itemData) => {
     setCCodeVal(itemData);
@@ -183,12 +205,20 @@ const PortfolioSummaryScreen = (props) => {
     );
   }
 
+  if (dropDownArray.length === 0) {
+    return (
+      <View style={styles.centered}>
+        <Text>No Clients. No Information.</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.dropDownContainer}>
         {dropDownArray.length !== 0 ? (
           <Picker
-            style={{ width: "100%", backgroundColor: "white" }}
+            style={{ width: "100%" }}
             onValueChange={changeItemHandler}
             selectedValue={
               cCodeVal === ""
@@ -207,7 +237,7 @@ const PortfolioSummaryScreen = (props) => {
         )}
       </View>
       <View style={styles.detailContainer}>
-        <ScrollView>
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 5 }}>
           <Card style={styles.contentContainer}>
             <TitleText>Total Cost</TitleText>
             {loadingDetails ? (
@@ -290,7 +320,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   dropDownContainer: {
-    width: "100%",
+    width: "97%",
+    backgroundColor: "white",
+    marginVertical: 10,
+    borderRadius: 10,
+    overflow: "hidden",
+    marginHorizontal: "1.5%",
+    shadowColor: Colors.none,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.26,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  linearGrad: {
+    flex: 1,
   },
   detailContainer: {
     flex: 1,

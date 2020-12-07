@@ -2,6 +2,7 @@ import React from "react";
 import { StyleSheet, View } from "react-native";
 import DefaultText from "../UI/DefaultText";
 import Card from "../UI/Card";
+import Colors from "../../constants/Colors";
 
 const GLTile = (props) => {
   return (
@@ -18,7 +19,16 @@ const GLTile = (props) => {
         }}
       >
         <DefaultText>{props.tradeprice}</DefaultText>
-        <DefaultText>{props.perchange}%</DefaultText>
+        <DefaultText
+          style={{
+            color:
+              parseFloat(props.perchange).toFixed(2) < 0
+                ? Colors.negative
+                : Colors.positive,
+          }}
+        >
+          {props.perchange}%
+        </DefaultText>
       </View>
     </Card>
   );

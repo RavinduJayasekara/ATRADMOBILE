@@ -6,6 +6,8 @@ import {
   FlatList,
   ActivityIndicator,
 } from "react-native";
+import { HeaderButtons, Item } from "react-navigation-header-buttons";
+import HeaderButton from "../../components/ATComponents/HeaderButton";
 
 import * as topStocks from "../../store/action/topStocks";
 import TitleText from "../../components/UI/TitleText";
@@ -16,7 +18,9 @@ import Colors from "../../constants/Colors";
 const GainersScreen = (props) => {
   const [isLoading, setIsLoading] = useState(false);
 
-  const gainers = useSelector((state) => state.topStocks.securities);
+  const gainers = useSelector((state) => state.topStocks.securitiesGainer);
+
+  console.log(gainers);
 
   const dispatch = useDispatch();
 

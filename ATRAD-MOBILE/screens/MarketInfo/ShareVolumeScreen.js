@@ -10,7 +10,7 @@ import Colors from "../../constants/Colors";
 const ShareVolumeScreen = (props) => {
   const [isLoading, setIsLoading] = useState(false);
 
-  const shareVolume = useSelector((state) => state.topStocks.securities);
+  const shareVolume = useSelector((state) => state.topStocks.securitiesShareVolume);
 
   const dispatch = useDispatch();
 

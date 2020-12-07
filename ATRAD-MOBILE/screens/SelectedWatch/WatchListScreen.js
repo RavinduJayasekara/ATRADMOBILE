@@ -5,42 +5,46 @@ import {
   Text,
   View,
   ActivityIndicator,
+  Platform,
 } from "react-native";
-import { useSelector } from "react-redux";
-import AllSecurityTile from "../../components/ATComponents/AllSecurityTile";
+import { useDispatch, useSelector } from "react-redux";
+import { SearchBar } from "react-native-elements";
 
+import AllSecurityTile from "../../components/ATComponents/AllSecurityTile";
 import Colors from "../../constants/Colors";
-import Links from "../../Links/Links";
-import Watch from "../../Links/Watch";
+import * as dropdownAllSecurities from "../../store/action/dropdownsecurities";
 
 const WatchListScreen = (props) => {
+  const watchId = useSelector((state) => state.auth.watchId);
+  const dispatch = useDispatch();
   const [isLoading, setIsLoading] = useState(false);
-  const [allSecurities, setAllSecurities] = useState([]);
-  const watchId = useSelector((state) => state.login.watchId);
+  const [searchWord, setSearchWord] = useState("");
+  const allSecurities = useSelector(
+    (state) => state.dropdownsecurities.securityDetails
+  );
 
+  const securityDetails = useSelector(
+    (state) => state.dropdownsecurities.securityDetails
+  );
+  const [searchedSecurities, setSearchedSecurities] = useState([]);
 
-  const getAllSecurities = useCallback(async () => {
-    try {
-      const response = await fetch(Links.mLink + Watch.allSecurityLink);
-      if (!response.ok) {
-        throw new Error("Something went wrong!");
-      }
+  const searchHandler = (text) => {
+    setSearchWord(text);
+    let securityToUpperCase = text.toUpperCase();
+    // const filteredSecuritities = allSecurities.filter((sec) =>
+    //   sec.match(securityToUpperCase, "g")
+    // );
 
-      const resData = await response.text();
+    const filteredSecuritities = allSecurities.filter((sec) =>
+      sec.security.match(securityToUpperCase, "g")
+    );
 
-      let replaceString = resData.replace(/'/g, '"');
-      let object = JSON.parse(replaceString);
-
-      setAllSecurities(object.data.items);
-      // console.log(object.data.items);
-    } catch (error) {
-      throw error;
-    }
-  }, []);
+    setSearchedSecurities(filteredSecuritities);
+  };
 
   const loadAllSecurities = useCallback(async () => {
     setIsLoading(true);
-    await getAllSecurities();
+    await dispatch(dropdownAllSecurities.fetchDropDownAllSecurities());
     setIsLoading(false);
   }, [setIsLoading]);
 
@@ -57,18 +61,26 @@ const WatchListScreen = (props) => {
   }
 
   return (
-    <FlatList
-      contentContainerStyle={{ marginHorizontal: 5, paddingHorizontal: 5 }}
-      data={allSecurities}
-      renderItem={(itemData) => (
-        <AllSecurityTile
-          cSecurity={itemData.item.security}
-          cName={itemData.item.securityDes}
-          watchID={watchId}
-        />
-      )}
-      keyExtractor={(item, index) => item.security}
-    />
+    <View style={styles.container}>
+      <SearchBar
+        platform={Platform.OS === "android" ? "android" : "ios"}
+        placeholder={"Type Here..."}
+        onChangeText={searchHandler}
+        value={searchWord}
+      />
+      <FlatList
+        contentContainerStyle={{ marginHorizontal: 5, paddingHorizontal: 5 }}
+        data={searchWord === "" ? allSecurities : searchedSecurities}
+        renderItem={(itemData) => (
+          <AllSecurityTile
+            cSecurity={itemData.item.security}
+            cName={itemData.item.securityDes}
+            watchID={watchId}
+          />
+        )}
+        keyExtractor={(item, index) => item.security}
+      />
+    </View>
   );
 };
 
@@ -77,6 +89,9 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  container: {
+    flex: 1,
   },
 });
 

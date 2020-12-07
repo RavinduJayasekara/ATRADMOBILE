@@ -4,165 +4,184 @@ import {
   StyleSheet,
   Text,
   Button,
-  Modal,
   ScrollView,
-  TouchableHighlight,
-  Platform,
   ActivityIndicator,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { HeaderButtons, Item } from "react-navigation-header-buttons";
+import HeaderButton from "../../components/ATComponents/HeaderButton";
+
 import TitleText from "../../components/UI/TitleText";
 import MarketInfo from "../../Links/MarketInfo";
 import Links from "../../Links/Links";
-import DefaultText from "../../components/UI/DefaultText";
 import Card from "../../components/UI/Card";
 import Colors from "../../constants/Colors";
+import { Picker } from "@react-native-community/picker";
+import { LinearGradient } from "expo-linear-gradient";
+
+const generateLinkForSectorData = (secId) => {
+  return (
+    Links.mLink +
+    "sector?action=getSectorData&format=json&exchange=CSE&sectorId=" +
+    secId
+  );
+};
 
 const MarketInfoScreen = (props) => {
-  const [marketInfoDetails, setMarketInfoDetails] = useState([]);
   const [marketStatus, setMarketStatus] = useState();
-  const [marketDropDown, setMarketDropDown] = useState([]);
-  const [visible, setVisible] = useState(false);
-  const [sectors, setSectors] = useState("ASI");
-  const [chartData, setChartData] = useState();
+  const [sectorDropDown, setSectorDropDown] = useState([]);
+  const [sectorCode, setSectorCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingMarketInfo, setLoadingMarketInfo] = useState(false);
+  const [totVolume, setTotVolume] = useState(0);
+  const [totTrades, setTotTrades] = useState(0);
+  const [totTurnOver, setTotTurnOver] = useState("");
+  const [change, setChange] = useState("");
+  const [perChange, setPerChange] = useState("");
+  const [previousCloseVal, setPreviousCloseVal] = useState("");
+  let changeOrPerChangeColor = "";
 
-  const getMarketInfo = useCallback(async () => {
-    try {
-      const response = await fetch(Links.mLink + MarketInfo.sectorLink);
+  const getMarketInfo = useCallback(
+    async (link) => {
+      let totTO = "";
+      let totTr = "";
+      let totV = "";
+      let c = "";
+      let pC = "";
+      let pCV = "";
 
-      if (!response.ok) {
-        throw new Error("Something went wrong");
+      try {
+        const response = await fetch(link);
+
+        if (!response.ok) {
+          throw new Error("Something went wrong");
+        }
+
+        const resData = await response.text();
+
+        let replaceString = resData.replace(/'/g, '"');
+        let object = JSON.parse(replaceString);
+        const marketInfoArray = object.data.sector;
+        marketInfoArray.map((item) => {
+          totTO = item.totTurnOver;
+          totV = item.totVolume;
+          totTr = item.totTrades;
+          c = item.change;
+          pC = item.perChange;
+          pCV = item.previousCloseVal;
+        });
+      } catch (error) {
+        throw error;
       }
+      setTotTurnOver(totTO);
+      setTotVolume(parseFloat(totV));
+      setTotTrades(parseFloat(totTr));
+      setChange(c);
+      setPerChange(pC);
+      setPreviousCloseVal(pCV);
+    },
+    [
+      setTotTrades,
+      setTotTurnOver,
+      setTotVolume,
+      setPerChange,
+      setPreviousCloseVal,
+      setChange,
+    ]
+  );
 
-      const resData = await response.text();
-
-      let replaceString = resData.replace(/'/g, '"');
-      let object = JSON.parse(replaceString);
-      setMarketInfoDetails(object.data.sector);
-    } catch (error) {
-      throw error;
-    }
-  }, []);
-  const getAllSecurities = useCallback(async () => {
+  const getChartInfo = async (sCode) => {
     try {
-      const response = await fetch(Links.mLink + Watch.allSecurityLink);
+      const response = await fetch(
+        Links.mLink +
+          "marketdetails?action=getIntraDayData&format=json&market=CSE&item=" +
+          sCode
+      );
       if (!response.ok) {
         throw new Error("Something went wrong!");
       }
 
       const resData = await response.text();
-
       let replaceString = resData.replace(/'/g, '"');
       let object = JSON.parse(replaceString);
-
-      setAllSecurities(object.data.items);
     } catch (error) {
       throw error;
     }
-  }, []);
+  };
 
-  const getMarketStatus = useCallback(() => {
-    var request = new XMLHttpRequest();
-    request.onreadystatechange = (e) => {
-      if (request.readyState !== 4) {
-        return;
-      }
-      if (request.status === 200) {
-        let string = request.responseText;
-        let replaceString = string.replace(/'/g, '"');
-        let object = JSON.parse(replaceString);
-        setMarketStatus(object.data.status);
-      } else {
-        console.warn("error" + "\n\n\n");
-      }
-    };
+  const getMarketStatus = useCallback(async () => {
+    const response = await fetch(Links.mLink + MarketInfo.statusLink);
 
-    request.open("GET", Links.mLink + MarketInfo.statusLink, true);
-    request.setRequestHeader(
-      "Content-Type",
-      "application/x-www-form-urlencoded"
-    );
-    request.send();
+    if (!response.ok) {
+      throw new Error("Something went wrong!");
+    }
+
+    const resData = await response.text();
+
+    let replaceString = resData.replace(/'/g, '"');
+    let object = JSON.parse(replaceString);
+    setMarketStatus(object.data.status);
   }, [setMarketStatus]);
 
-  const getDropDownDetails = useCallback(() => {
-    var request = new XMLHttpRequest();
-    request.onreadystatechange = (e) => {
-      if (request.readyState !== 4) {
-        return;
-      }
-      if (request.status === 200) {
-        let string = request.responseText;
-        let replaceString = string.replace(/'/g, '"');
-        let object = JSON.parse(replaceString);
-        const sectorValues = object.data.indices;
-        let arrayList = [];
-        for (const key in sectorValues) {
-          arrayList.push({
-            label: sectorValues[key].sector,
-            value: sectorValues[key].sector,
-          });
-        }
-        setMarketDropDown(arrayList);
-      } else {
-        console.warn("error" + "\n\n\n");
-      }
-    };
+  const getDropDownDetails = useCallback(async () => {
+    const response = await fetch(Links.mLink + MarketInfo.marketDetailsLink);
 
-    request.open("GET", Links.mLink + MarketInfo.marketDetailsLink, true);
-    request.setRequestHeader(
-      "Content-Type",
-      "application/x-www-form-urlencoded"
-    );
-    request.send();
+    const resData = await response.text();
+
+    let replaceString = resData.replace(/'/g, '"');
+    let object = JSON.parse(replaceString);
+    const sectorValues = object.data.indices;
+    let arrayList = [];
+    for (const key in sectorValues) {
+      arrayList.push({
+        label: sectorValues[key].sector,
+        value: sectorValues[key].sector,
+      });
+    }
+    setSectorDropDown(arrayList);
   }, []);
 
-  const getChartData = useCallback(() => {
-    var request = new XMLHttpRequest();
-    request.onreadystatechange = (e) => {
-      if (request.readyState !== 4) {
-        return;
-      }
-      if (request.status === 200) {
-        let string = request.responseText;
-        let replaceString = string.replace(/'/g, '"');
-        let object = JSON.parse(replaceString);
-        // const sectorValues = object.data.indices;
-        // let arrayList = [];
-        // for (const key in sectorValues) {
-        //   arrayList.push({
-        //     label: sectorValues[key].sector,
-        //     value: sectorValues[key].sector,
-        //   });
-        // }
-        // setMarketDropDown(arrayList);
-      } else {
-        console.warn("error" + "\n\n\n");
-      }
-    };
-
-    request.open("GET", Links.mLink + MarketInfo.chartDetailsLink, true);
-    request.setRequestHeader(
-      "Content-Type",
-      "application/x-www-form-urlencoded"
-    );
-    request.send();
-  }, []);
-
-  useLayoutEffect(() => {}, []);
+  const loadMarketInfo = useCallback(async () => {
+    setIsLoading(true);
+    await getMarketStatus();
+    await getDropDownDetails();
+    setIsLoading(false);
+  }, [setIsLoading, getMarketStatus, getDropDownDetails]);
 
   useLayoutEffect(() => {
-    const loadMarketInfo = async () => {
-      setIsLoading(true);
-      await getMarketInfo();
-      await getMarketStatus();
-      await getDropDownDetails();
-      await getChartData();
-      setIsLoading(false);
-    };
+    props.navigation.setOptions({
+      headerRight: () => {
+        return (
+          <HeaderButtons HeaderButtonComponent={HeaderButton}>
+            <Item
+              iconName="ios-search"
+              onPress={() => {
+                props.navigation.navigate("SearchStackNavigator");
+              }}
+            />
+          </HeaderButtons>
+        );
+      },
+    });
     loadMarketInfo();
-  }, []);
+  }, [loadMarketInfo]);
+
+  const sectorHandling = useCallback(
+    async (itemData) => {
+      setSectorCode(itemData);
+      const linkUrl = generateLinkForSectorData(itemData);
+      setLoadingMarketInfo(true);
+      await getMarketInfo(linkUrl);
+      await getChartInfo(itemData);
+      setLoadingMarketInfo(false);
+    },
+    [setLoadingMarketInfo, getMarketInfo, getChartInfo, setSectorCode]
+  );
+
+  if (change < 0 && perChange < 0) {
+    changeOrPerChangeColor = Colors.negative;
+  } else {
+    changeOrPerChangeColor = Colors.positive;
+  }
 
   if (isLoading) {
     return (
@@ -172,118 +191,132 @@ const MarketInfoScreen = (props) => {
     );
   }
 
-  const sectorHandling = (item, index) => {
-    setSectors(item.label);
-    setVisible(!visible);
-  };
-
   return (
     <View style={styles.container}>
-      <ScrollView>
-        <View style={styles.headerTitle}>
-          <TitleText>Colombo Stock Exchange</TitleText>
-        </View>
-
-        {marketInfoDetails &&
-          marketInfoDetails.map((item, index) => (
-            <View style={styles.informationContainer} key={index}>
+      <LinearGradient
+        style={styles.linearGrad}
+        colors={["#000000", "#696c69", "#b0bab1"]}
+      >
+        <ScrollView>
+          <View style={styles.headerTitle}>
+            <TitleText style={styles.title}>Colombo Stock Exchange</TitleText>
+          </View>
+          <View>
+            <Card style={styles.informationContainer}>
               <View style={styles.valueContainer}>
                 <View style={styles.titleContainer}>
                   <TitleText>TurnOver</TitleText>
-                  <Text>{item.totTurnOver}</Text>
+                  {!loadingMarketInfo ? (
+                    <Text>{totTurnOver}</Text>
+                  ) : (
+                    <View>
+                      <ActivityIndicator size="small" color={Colors.primary} />
+                    </View>
+                  )}
                 </View>
                 <View style={styles.titleContainer}>
                   <TitleText>Volume</TitleText>
-                  <Text>{item.totVolume}</Text>
+                  {!loadingMarketInfo ? (
+                    <Text>
+                      {totVolume
+                        .toString()
+                        .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                    </Text>
+                  ) : (
+                    <View>
+                      <ActivityIndicator size="small" color={Colors.primary} />
+                    </View>
+                  )}
                 </View>
               </View>
               <View style={styles.valueContainer}>
                 <View style={styles.titleContainer}>
                   <TitleText>Symbol Traded</TitleText>
-                  <Text>{item.totTrades}</Text>
+                  {!loadingMarketInfo ? (
+                    <Text>
+                      {totTrades
+                        .toString()
+                        .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                    </Text>
+                  ) : (
+                    <View>
+                      <ActivityIndicator size="small" color={Colors.primary} />
+                    </View>
+                  )}
                 </View>
                 <View style={styles.titleContainer}>
                   <TitleText>Market Status</TitleText>
                   <Text
-                    style={{ color: marketStatus === "Open" ? "green" : "red" }}
+                    style={{
+                      color: marketStatus === "Open" ? "green" : "red",
+                    }}
                   >
                     {marketStatus}
                   </Text>
                 </View>
               </View>
-            </View>
-          ))}
-        <Card style={styles.midSectionContainer}>
-          <View style={styles.midSection}>
-            <Modal
-              visible={visible}
-              animationType="slide"
-              presentationStyle="pageSheet"
-            >
-              <View
-                style={
-                  Platform.OS === "android"
-                    ? {}
-                    : { marginVertical: 25, marginHorizontal: 10 }
-                }
-              >
-                <ScrollView>
-                  {marketDropDown.map((item, index) => (
-                    <TouchableHighlight
+            </Card>
+          </View>
+          <Card style={styles.midSectionContainer}>
+            <View style={styles.midSection}>
+              <View style={styles.midContainer}>
+                <Picker
+                  onValueChange={sectorHandling}
+                  selectedValue={
+                    sectorCode === "" ? sectorHandling("ASI") : sectorCode
+                  }
+                >
+                  {sectorDropDown.map((item, index) => (
+                    <Picker.Item
+                      label={item.label}
+                      value={item.value}
                       key={index}
-                      onPress={sectorHandling.bind(this, item, index)}
-                    >
-                      <DefaultText>{item.label}</DefaultText>
-                    </TouchableHighlight>
+                    />
                   ))}
-                </ScrollView>
+                </Picker>
               </View>
-            </Modal>
-            <TouchableHighlight
-              style={styles.openButton}
+              <View style={styles.midContainer}>
+                {!loadingMarketInfo ? (
+                  <Text>{previousCloseVal}</Text>
+                ) : (
+                  <View>
+                    <ActivityIndicator size="small" color={Colors.primary} />
+                  </View>
+                )}
+                {!loadingMarketInfo ? (
+                  <Text style={{ color: changeOrPerChangeColor }}>
+                    {change} ({perChange})%
+                  </Text>
+                ) : (
+                  <View>
+                    <ActivityIndicator size="small" color={Colors.primary} />
+                  </View>
+                )}
+              </View>
+            </View>
+          </Card>
+          <View style={styles.buttonContainer}>
+            <Button
+              title="Market Summary"
               onPress={() => {
-                setVisible(true);
+                props.navigation.navigate("MarketSummaryStackNavigator");
               }}
-            >
-              <Text>{sectors}</Text>
-            </TouchableHighlight>
+            />
+            <Button
+              title="Top Stocks"
+              onPress={() => {
+                props.navigation.navigate("TopStocksStackNavigator");
+              }}
+            />
+            <Button
+              title="Announcements"
+              onPress={() => {
+                props.navigation.navigate("AnnouncementsScreen");
+              }}
+            />
           </View>
-          <View style={styles.midSection}>
-            <Text></Text>
-            <Text></Text>
-          </View>
-        </Card>
-        <View style={styles.chartContainer}>
-          <View style={{ flexDirection: "row", width: "100%" }}>
-            <View style={{ width: "67%", alignItems: "flex-end" }}>
-              <Text>ASI INTRA DAY CHART</Text>
-            </View>
-            <View style={{ width: "33%", alignItems: "flex-end" }}>
-              <Ionicons name="ios-menu" size={25} color={"#ccc"} />
-            </View>
-          </View>
-        </View>
-        <View style={styles.buttonContainer}>
-          <Button
-            title="Market Summary"
-            onPress={() => {
-              props.navigation.navigate("MarketSummaryStackNavigator");
-            }}
-          />
-          <Button
-            title="Top Stocks"
-            onPress={() => {
-              props.navigation.navigate("TopStocksStackNavigator");
-            }}
-          />
-          <Button
-            title="Announcements"
-            onPress={() => {
-              props.navigation.navigate("AnnouncementsScreen");
-            }}
-          />
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </LinearGradient>
     </View>
   );
 };
@@ -293,29 +326,29 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     paddingVertical: 10,
   },
+  linearGrad: {
+    flex: 1,
+  },
   titleContainer: {
     width: "50%",
   },
   chartContainer: {
     margin: 10,
-    backgroundColor: "white",
-    shadowColor: "black",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.26,
-    shadowRadius: 8,
-    elevation: 8,
     borderRadius: 10,
-    height: 300,
     padding: 6,
+  },
+  midContainer: {
+    width: "50%",
+    padding: 5,
   },
   midSectionContainer: {
     padding: 5,
     margin: 10,
-    flexDirection: "row",
+    width: "95%",
   },
   midSection: {
-    width: "50%",
     paddingHorizontal: 2,
+    flexDirection: "row",
   },
   buttonContainer: {
     flexDirection: "row",
@@ -328,14 +361,8 @@ const styles = StyleSheet.create({
   },
   informationContainer: {
     margin: 10,
-    backgroundColor: "white",
     borderRadius: 10,
     padding: 5,
-    shadowColor: "black",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.26,
-    shadowRadius: 8,
-    elevation: 8,
   },
   container: {
     flex: 1,
@@ -350,6 +377,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  title: {
+    fontSize: 20,
+    color: "white",
   },
 });
 

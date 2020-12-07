@@ -1,28 +1,51 @@
 import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
-  Button,
   Text,
   FlatList,
   TouchableOpacity,
   StyleSheet,
   TextInput,
+  ActivityIndicator,
 } from "react-native";
+import { HeaderButtons, Item } from "react-navigation-header-buttons";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "../../constants/Colors";
 import SelectedWatchTile from "../../components/ATComponents/SelectedWatchTile";
 import Links from "../../Links/Links";
 import { useDispatch, useSelector } from "react-redux";
-import * as loginActions from "../../store/action/login";
+import HeaderButton from "../../components/ATComponents/HeaderButton";
 
 const SelectedWatchScreen = (props) => {
   const [array, setArray] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  // const [watchId, setWatchId] = useState("");
 
-  const dispatch = useDispatch();
+  const setWatch = useSelector((state) => state.auth.watchId);
 
-  const setWatch = useSelector((state) => state.login.watchId);
+  const deleteSelectedWatchTile = async (security) => {
+    try {
+      const response = await fetch(
+        Links.mLink +
+          "watch?action=deleteUserSecurity&format=json&exchange=CSE&bookDefId=1&securityid=" +
+          security +
+          "&watchId=" +
+          setWatch
+      );
+
+      if (!response.ok) {
+        throw new Error("Something went wrong!");
+      }
+
+      const resData = await response.text();
+
+      let replaceString = resData.replace(/'/g, '"');
+      let object = JSON.parse(replaceString);
+
+      loadData();
+    } catch (err) {
+      throw err;
+    }
+  };
 
   const getData = useCallback(
     async (watchIdUser) => {
@@ -51,33 +74,64 @@ const SelectedWatchScreen = (props) => {
     [setArray]
   );
 
-  useEffect(() => {
+  const loadData = useCallback(async () => {
     setIsLoading(true);
-    dispatch(loginActions.login());
+    await getData(setWatch);
     setIsLoading(false);
-  }, [dispatch, setIsLoading]);
+  }, [setIsLoading, getData]);
+
+  useEffect(() => {
+    props.navigation.setOptions({
+      headerRight: () => {
+        return (
+          <HeaderButtons HeaderButtonComponent={HeaderButton}>
+            <Item
+              iconName="ios-search"
+              onPress={() => {
+                props.navigation.navigate("SearchStackNavigator");
+              }}
+            />
+          </HeaderButtons>
+        );
+      },
+    });
+    props.navigation.addListener("focus", loadData);
+  }, [loadData]);
+
+  if (isLoading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1 }}>
-      <View>
+      <View style={styles.comName}>
         <TouchableOpacity
           onPress={() => props.navigation.navigate("WatchListScreen")}
         >
           <View style={{ flexDirection: "row", alignItems: "flex-end" }}>
-            <Ionicons name="ios-search" size={25} color={Colors.accent} />
-            <Text style={{ fontSize: 20 }}>Select Symbol/Company Name</Text>
+            <View style={styles.icon}>
+              <Ionicons name="ios-search" size={25} color={"white"} />
+            </View>
+            <Text style={{ fontSize: 20, color: "white" }}>
+              Select Symbol/Company Name
+            </Text>
           </View>
         </TouchableOpacity>
       </View>
-      <Button title="getData" onPress={getData.bind(this, setWatch)} />
       <FlatList
-        contentContainerStyle={{ marginHorizontal: 10 }}
+        onRefresh={loadData}
+        refreshing={isLoading}
+        contentContainerStyle={{ padding: 10 }}
         data={array}
         renderItem={(itemData) => (
           <SelectedWatchTile
             cSecurity={itemData.item.security}
             cName={itemData.item.companyname}
-            cLowpx={itemData.item.lowpx}
+            cTradePrice={itemData.item.tradeprice}
             cNetChange={itemData.item.netchange}
             cPerChange={itemData.item.perchange}
             onPress={() =>
@@ -94,6 +148,10 @@ const SelectedWatchScreen = (props) => {
                 perchange: itemData.item.perchange,
               })
             }
+            removeHandler={deleteSelectedWatchTile.bind(
+              this,
+              itemData.item.security
+            )}
           />
         )}
         keyExtractor={(item, index) => item.id}
@@ -102,6 +160,22 @@ const SelectedWatchScreen = (props) => {
   );
 };
 
-const styles = StyleSheet.create({});
+const styles = StyleSheet.create({
+  centered: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  comName: {
+    backgroundColor: Colors.none,
+    margin: 10,
+    padding: 10,
+    borderRadius: 10,
+    overflow: "hidden",
+  },
+  icon: {
+    marginHorizontal: 10,
+  },
+});
 
 export default SelectedWatchScreen;

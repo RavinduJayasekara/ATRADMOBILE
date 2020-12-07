@@ -16,7 +16,7 @@ import Colors from "../../constants/Colors";
 const LosersScreen = (props) => {
   const [isLoading, setIsLoading] = useState(false);
 
-  const losers = useSelector((state) => state.topStocks.securities);
+  const losers = useSelector((state) => state.topStocks.securitiesLoser);
 
   const dispatch = useDispatch();
 

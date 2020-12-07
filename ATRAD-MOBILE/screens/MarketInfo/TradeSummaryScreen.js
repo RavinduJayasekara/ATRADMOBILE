@@ -93,8 +93,6 @@ const TradeSummary = (props) => {
     );
   };
 
-  // console.log(tradeSecDetailsArray);
-
   if(tradeSecDetailsArray){
     <View style = {styles.centered}>
       <Text>Market Data is not updated for today</Text>
